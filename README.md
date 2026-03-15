@@ -1,4 +1,4 @@
-# Surveillance Inscriptions (Lacale Watcher)
+# Surveillance Inscriptions (Watcher)
 
 Application Windows de surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
 
