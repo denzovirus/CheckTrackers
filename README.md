@@ -43,4 +43,4 @@ pyinstaller check_tracker.spec --noconfirm
 
 L'exe se retrouve dans `dist/`.
 
-
+![CheckTracker](images/app.png)
