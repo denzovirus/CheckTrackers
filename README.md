@@ -1,36 +1,42 @@
-CheckTracker v0.4 — β
+# CheckTracker
 
-Surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
-🔄 Réécriture complète — Python → C# WinForms
+Application Windows de surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
 
-Cette version abandonne entièrement Python pour une application native Windows écrite en C# .NET Framework 4.7.2. Aucun runtime Python requis, aucune dépendance externe. Un seul .exe autonome.
+Surveille en temps réel : **la-cale.space**, **abn.lol**, **tctg.pm**, **hdf.world** + sites personnalisés.
 
-Nouveautés v0.4
+## Fonctionnalités
 
-Application native Windows :
+- Vérification automatique à intervalle configurable (5–60 min)
+- **↻ Vérifier maintenant** — vérification manuelle en un clic
+- Notification Windows (bulle systray) à l'ouverture des inscriptions — **uniquement lors d'une transition** (fermé → ouvert)
+- Icône dans la zone de notification (fonctionne en arrière-plan)
+- Historique des états avec filtrage par site (JSON local)
+- Sites personnalisés ajoutables, éditables et testables individuellement (**▶ ✎ ×**)
+- **Compteur d'ouvertures** par site (↑N) calculé depuis l'historique
+- **Timeout HTTP configurable** dans les options (3–60 s)
+- Taille et position de la fenêtre mémorisées entre les sessions
+- Démarrage automatique avec Windows (optionnel)
+- Détection automatique des mises à jour depuis GitHub Releases
+- Badge β — version bêta active
 
-• Réécriture complète de Python vers C# WinForms
-• Exécutable autonome — aucune installation, aucun Python requis
-• Interface plus réactive et plus stable
+## Fonctionnement de la détection
 
-Fonctionnalités :
+CheckTracker charge la page d'inscription de chaque site surveillé et recherche la présence du texte `"inscriptions fermées"` dans le contenu.
 
-• Intervalle de vérification en minutes (5–60 min), jamais moins de 5 min
-• Variation aléatoire ±15 secondes pour éviter la détection anti-bot
-• Filtre console en temps réel : Tous / OUVERT / FERMÉ / ERREUR
-• Historique complet avec URLs des sites vérifiés
-• Vérification de mise à jour automatique au démarrage via GitHub Releases
-• Mise à jour automatique : téléchargement + remplacement de l'exe + redémarrage en un clic
-• Badge de version unifié β 0.4 ✓ / β 0.4 ↑ v0.x
+- Texte **présent** → statut `FERMÉ` — aucune alerte
+- Texte **absent** (et HTTP 200) → statut `OUVERT` → **notification + son**
 
-Sites surveillés par défaut :
-• la-cale.space
-• abn.lol
-• tctg.pm
-• hdf.world
-Sites personnalisés ajoutables / modifiables / supprimables
+La notification ne se déclenche qu'une seule fois par ouverture (pas de spam si le site reste ouvert).
 
-Utilisation :
+## Utilisation
 
-Télécharge CheckTracker.exe et lance-le directement. Aucune installation requise.
-⚠️ Version bêta — des bugs peuvent subsister. N'hésite pas à ouvrir une issue.
+Télécharge le dernier `.exe` depuis la page [Releases](../../releases) et lance-le directement. Aucune installation requise.
+
+Les fichiers de données sont créés dans le même dossier que l'exécutable :
+- `check_tracker.json` — configuration et taille de fenêtre
+- `check_tracker_history.json` — historique des vérifications
+- `check_tracker.log` — log des erreurs détaillées
+
+## Licence
+
+Voir [LICENSE](LICENSE).
