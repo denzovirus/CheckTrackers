@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['lacale_gui.py'],
+    ['check_tracker.py'],
     pathex=[],
     binaries=[],
-    datas=[('check_tracker.json', '.')],
+    datas=[],  # pas de données embarquées — les fichiers config/historique sont créés au premier lancement
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
