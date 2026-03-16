@@ -1,46 +1,36 @@
-# CheckTracker
+CheckTracker v0.4 — β
 
-Application Windows de surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
+Surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
+🔄 Réécriture complète — Python → C# WinForms
 
-Surveille en temps réel : **la-cale.space**, **abn.lol**, **tctg.pm**, **hdf.world** + sites personnalisés.
+Cette version abandonne entièrement Python pour une application native Windows écrite en C# .NET Framework 4.7.2. Aucun runtime Python requis, aucune dépendance externe. Un seul .exe autonome.
 
-## Fonctionnalités
+Nouveautés v0.4
 
-- Vérification automatique à intervalle configurable (5–60 min)
-- **↻ Vérifier maintenant** — vérification manuelle en un clic
-- Notification Windows (bulle systray) à l'ouverture des inscriptions
-- Icône dans la zone de notification (fonctionne en arrière-plan)
-- Historique des états (JSON local)
-- Sites personnalisés ajoutables, éditables et testables individuellement (**▶ ✎ ×**)
-- Démarrage automatique avec Windows (optionnel)
-- Détection automatique des mises à jour depuis GitHub Releases
-- Badge β — version bêta active
+Application native Windows :
 
-## Utilisation
+• Réécriture complète de Python vers C# WinForms
+• Exécutable autonome — aucune installation, aucun Python requis
+• Interface plus réactive et plus stable
 
-Télécharge le dernier `.exe` depuis la page [Releases](../../releases) et lance-le directement. Aucune installation requise.
+Fonctionnalités :
 
-Les fichiers de données sont créés dans le même dossier que l'exécutable :
-- `check_tracker.json` — configuration
-- `check_tracker_history.json` — historique des vérifications
-- `check_tracker.log` — log des erreurs détaillées
+• Intervalle de vérification en minutes (5–60 min), jamais moins de 5 min
+• Variation aléatoire ±15 secondes pour éviter la détection anti-bot
+• Filtre console en temps réel : Tous / OUVERT / FERMÉ / ERREUR
+• Historique complet avec URLs des sites vérifiés
+• Vérification de mise à jour automatique au démarrage via GitHub Releases
+• Mise à jour automatique : téléchargement + remplacement de l'exe + redémarrage en un clic
+• Badge de version unifié β 0.4 ✓ / β 0.4 ↑ v0.x
 
-## Lancer depuis le code source
+Sites surveillés par défaut :
+• la-cale.space
+• abn.lol
+• tctg.pm
+• hdf.world
+Sites personnalisés ajoutables / modifiables / supprimables
 
-```bash
-pip install requests pystray pillow win10toast
-python check_tracker.py
-```
+Utilisation :
 
-Nécessite Python 3.10+, Windows uniquement.
-
-## Compiler l'exe
-
-```bash
-pip install pyinstaller
-pyinstaller check_tracker.spec --noconfirm
-```
-
-L'exe se retrouve dans `dist/`.
-
-![CheckTracker](images/app.png)
+Télécharge CheckTracker.exe et lance-le directement. Aucune installation requise.
+⚠️ Version bêta — des bugs peuvent subsister. N'hésite pas à ouvrir une issue.
