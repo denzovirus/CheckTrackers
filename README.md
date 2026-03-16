@@ -1,4 +1,4 @@
-# Surveillance Inscriptions (Watcher)
+# CheckTracker
 
 Application Windows de surveillance automatique des ouvertures d'inscriptions sur les hébergeurs francophones.
 
@@ -7,11 +7,13 @@ Surveille en temps réel : **la-cale.space**, **abn.lol**, **tctg.pm**, **hdf.wo
 ## Fonctionnalités
 
 - Vérification automatique à intervalle configurable (5–60 min)
+- **↻ Vérifier maintenant** — vérification manuelle en un clic
 - Notification Windows (bulle systray) à l'ouverture des inscriptions
 - Icône dans la zone de notification (fonctionne en arrière-plan)
 - Historique des états (JSON local)
-- Sites personnalisés ajoutables
+- Sites personnalisés ajoutables, éditables et testables individuellement (**▶ ✎ ×**)
 - Démarrage automatique avec Windows (optionnel)
+- Détection automatique des mises à jour depuis GitHub Releases
 - Badge β — version bêta active
 
 ## Utilisation
@@ -27,7 +29,7 @@ Les fichiers de données sont créés dans le même dossier que l'exécutable :
 
 ```bash
 pip install requests pystray pillow win10toast
-python lacale_gui.py
+python check_tracker.py
 ```
 
 Nécessite Python 3.10+, Windows uniquement.
@@ -36,7 +38,7 @@ Nécessite Python 3.10+, Windows uniquement.
 
 ```bash
 pip install pyinstaller
-pyinstaller lacale_gui.spec --noconfirm
+pyinstaller check_tracker.spec --noconfirm
 ```
 
 L'exe se retrouve dans `dist/`.
