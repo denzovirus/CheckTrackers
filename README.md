@@ -37,6 +37,8 @@ Les fichiers de données sont créés dans le même dossier que l'exécutable :
 - `check_tracker_history.json` — historique des vérifications
 - `check_tracker.log` — log des erreurs détaillées
 
+- ![Interface CheckTracker](images/app.png)
+
 ## Licence
 
 Voir [LICENSE](LICENSE).
