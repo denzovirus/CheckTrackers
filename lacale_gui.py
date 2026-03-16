@@ -42,28 +42,82 @@ if TYPE_CHECKING:
 
 CLOSED_MARKER_PATTERN = r"inscriptions?\s+ferm"
 
-# Déterminer le répertoire de base (pour l'exe PyInstaller ou le script Python)
-if getattr(sys, 'frozen', False):
-    # L'app est exécutée comme exe PyInstaller
-    BASE_DIR = Path(sys.argv[0]).parent.absolute()
-else:
-    # L'app est exécutée comme script Python
-    BASE_DIR = Path(__file__).parent.absolute()
 
-try:
-    CONFIG_PATH = BASE_DIR / "check_tracker.json"
-    HISTORY_PATH = BASE_DIR / "check_tracker_history.json"
-    LOG_PATH = BASE_DIR / "check_tracker.log"
-    # Vérifier que le répertoire est accessible en écriture
-    if not BASE_DIR.exists():
-        BASE_DIR.mkdir(parents=True, exist_ok=True)
-except Exception:
-    # Fallback vers le répertoire utilisateur si erreur
-    BASE_DIR = Path.home()
-    CONFIG_PATH = BASE_DIR / "check_tracker_data" / "check_tracker.json"
-    HISTORY_PATH = BASE_DIR / "check_tracker_data" / "check_tracker_history.json"
-    LOG_PATH = BASE_DIR / "check_tracker_data" / "check_tracker.log"
-    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+class _Tooltip:
+    """Infobulle légère qui apparaît après un délai quand la souris reste sur un widget."""
+    _DELAY_MS = 600
+    _BG = "#fffbe6"
+    _FG = "#1f2933"
+
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self._widget = widget
+        self._text = text
+        self._tip: tk.Toplevel | None = None
+        self._job: str | None = None
+        widget.bind("<Enter>", self._on_enter, add="+")
+        widget.bind("<Leave>", self._on_leave, add="+")
+        widget.bind("<ButtonPress>", self._on_leave, add="+")
+
+    def _on_enter(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._job = self._widget.after(self._DELAY_MS, self._show)
+
+    def _on_leave(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
+        if self._job:
+            self._widget.after_cancel(self._job)
+            self._job = None
+        self._hide()
+
+    def _show(self) -> None:
+        if self._tip:
+            return
+        x = self._widget.winfo_rootx() + self._widget.winfo_width() // 2
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._tip = tk.Toplevel(self._widget)
+        self._tip.wm_overrideredirect(True)
+        self._tip.wm_geometry(f"+{x}+{y}")
+        lbl = tk.Label(
+            self._tip, text=self._text, bg=self._BG, fg=self._FG,
+            font=("Segoe UI Variable", 9), relief="solid", borderwidth=1,
+            padx=8, pady=4, wraplength=260,
+        )
+        lbl.pack()
+
+    def _hide(self) -> None:
+        if self._tip:
+            self._tip.destroy()
+            self._tip = None
+
+
+APP_VERSION = "0.3"
+GITHUB_REPO = "denzovirus/CheckTrackers"
+
+# Déterminer le répertoire de base (pour l'exe PyInstaller ou le script Python)
+def _resolve_base_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        # L'app est exécutée comme exe PyInstaller — sys.executable est fiable
+        candidate = Path(sys.executable).parent.absolute()
+    else:
+        candidate = Path(__file__).parent.absolute()
+
+    # Vérifier que le répertoire existe et est accessible en écriture
+    try:
+        candidate.mkdir(parents=True, exist_ok=True)
+        test_file = candidate / ".write_test"
+        test_file.write_text("ok", encoding="utf-8")
+        test_file.unlink()
+        return candidate
+    except Exception:
+        pass
+
+    # Fallback vers %APPDATA%\CheckTracker (toujours accessible en écriture)
+    appdata = Path(os.environ.get("APPDATA", Path.home())) / "CheckTracker"
+    appdata.mkdir(parents=True, exist_ok=True)
+    return appdata
+
+BASE_DIR = _resolve_base_dir()
+CONFIG_PATH = BASE_DIR / "check_tracker.json"
+HISTORY_PATH = BASE_DIR / "check_tracker_history.json"
+LOG_PATH = BASE_DIR / "check_tracker.log"
 
 BUILTIN_SITES = [
     {"key": "lacale", "name": "la-cale.space", "url": "https://la-cale.space/register"},
@@ -160,6 +214,7 @@ class LacaleWatcherApp:
             self._save_config()
 
         self._set_site_list_visible(self._sites_visible)
+        self._check_for_update()
 
     def _build_ui(self) -> None:
         # Style global + moderne (inspiré de Windows 11)
@@ -284,7 +339,8 @@ class LacaleWatcherApp:
         for col in range(5):
             main_frame.columnconfigure(col, weight=1 if col in (1, 2) else 0)
 
-        status_frame = ttk.Frame(main_frame, style="Card.TFrame")
+        self._status_frame = ttk.Frame(main_frame, style="Card.TFrame")
+        status_frame = self._status_frame
         status_frame.grid(row=0, column=0, columnspan=5, padx=10, pady=(0, 10), sticky="nsew")
         status_frame.columnconfigure(1, weight=1)
 
@@ -299,7 +355,7 @@ class LacaleWatcherApp:
         self.global_status_label.grid(row=0, column=1, columnspan=3, padx=0, pady=(10, 0), sticky="w")
 
         beta_badge = tk.Label(
-            status_frame, text="β 0.2",
+            status_frame, text="β 0.3",
             bg="#ede9fe", fg="#7c3aed",
             font=("Segoe UI Variable", 7, "bold"),
             padx=6, pady=2,
@@ -395,6 +451,13 @@ class LacaleWatcherApp:
         )
         self.stop_button.grid(row=9, column=3, padx=3, pady=8)
 
+        self.check_now_button = ttk.Button(
+            main_frame,
+            text="↻ Vérifier maintenant",
+            command=self._check_now,
+        )
+        self.check_now_button.grid(row=9, column=4, padx=(6, 10), pady=8, sticky="w")
+
         # Options notifications
         self.var_open_browser = tk.BooleanVar(value=self.open_browser_on_open)
         self.var_play_sound = tk.BooleanVar(value=self.play_sound_on_open)
@@ -463,6 +526,64 @@ class LacaleWatcherApp:
         main_frame.rowconfigure(15, weight=1)
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _check_for_update(self) -> None:
+        """Vérifie si une mise à jour est disponible sur GitHub (thread background)."""
+        def _fetch() -> None:
+            try:
+                api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+                resp = requests.get(
+                    api_url, timeout=5,
+                    headers={"User-Agent": f"CheckTracker/{APP_VERSION}"}
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    tag = data.get("tag_name", "").lstrip("v")
+                    html_url = data.get("html_url", "")
+                    if tag and self._is_newer(tag, APP_VERSION):
+                        self.root.after(0, lambda: self._show_update_badge(tag, html_url))
+                        return
+            except Exception:
+                pass
+            # À jour ou erreur réseau → badge vert
+            self.root.after(0, self._show_up_to_date_badge)
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def _is_newer(self, remote: str, local: str) -> bool:
+        def parse(v: str) -> tuple:
+            try:
+                return tuple(int(x) for x in v.split("."))
+            except Exception:
+                return (0,)
+        return parse(remote) > parse(local)
+
+    def _show_up_to_date_badge(self) -> None:
+        """Affiche un badge vert 'à jour' dans la barre de statut."""
+        if hasattr(self, "_update_badge"):
+            return
+        self._update_badge = tk.Label(
+            self._status_frame,
+            text="✓ à jour",
+            bg="#dcfce7", fg="#15803d",
+            font=("Segoe UI Variable", 7, "bold"),
+            padx=6, pady=2,
+        )
+        self._update_badge.grid(row=2, column=4, padx=(0, 10), pady=(0, 4), sticky="e")
+
+    def _show_update_badge(self, latest_version: str, url: str) -> None:
+        """Affiche un badge cliquable 'mise à jour disponible' dans la barre de statut."""
+        if hasattr(self, "_update_badge"):
+            return
+        self._update_badge = tk.Label(
+            self._status_frame,
+            text=f"⬆ v{latest_version} dispo",
+            bg="#fef3c7", fg="#92400e",
+            font=("Segoe UI Variable", 7, "bold"),
+            padx=6, pady=2,
+            cursor="hand2",
+        )
+        self._update_badge.grid(row=2, column=4, padx=(0, 10), pady=(0, 4), sticky="e")
+        self._update_badge.bind("<Button-1>", lambda _: webbrowser.open(url))
 
     def _append_log(self, text: str) -> None:
         if not hasattr(self, "log_lines"):
@@ -748,6 +869,28 @@ class LacaleWatcherApp:
         )
         check.grid(row=0, column=3, padx=(0, 4), pady=8)
 
+        # Bouton tester ▶
+        test_btn = tk.Button(
+            row_frame, text="▶", bg=panel, fg="#0078D4",
+            font=("Segoe UI Variable", 10), bd=0, relief="flat",
+            activebackground="#e0f0ff", activeforeground="#005a9e",
+            cursor="hand2",
+            command=lambda k=key: self._test_site_threaded(k),
+        )
+        test_btn.grid(row=0, column=4, padx=(0, 2), pady=8)
+        _Tooltip(test_btn, "Tester ce site maintenant")
+
+        # Bouton éditer ✎
+        edit_btn = tk.Button(
+            row_frame, text="✎", bg=panel, fg="#6b7280",
+            font=("Segoe UI Variable", 10), bd=0, relief="flat",
+            activebackground="#f0f4ff", activeforeground="#374151",
+            cursor="hand2",
+            command=lambda k=key: self._edit_site(k),
+        )
+        edit_btn.grid(row=0, column=5, padx=(0, 2), pady=8)
+        _Tooltip(edit_btn, "Modifier le nom / l'URL de ce site")
+
         # Bouton supprimer ×
         remove = tk.Button(
             row_frame, text="×", bg=panel, fg="#9ca3af",
@@ -756,9 +899,10 @@ class LacaleWatcherApp:
             cursor="hand2",
             command=lambda k=key: self._remove_custom_site(k),
         )
-        remove.grid(row=0, column=4, padx=(0, 8), pady=8)
+        remove.grid(row=0, column=6, padx=(0, 8), pady=8)
+        _Tooltip(remove, "Supprimer ce site de la liste")
 
-        self._custom_site_rows[key] = [row_frame, led, name_lbl, status_badge, check, remove]
+        self._custom_site_rows[key] = [row_frame, led, name_lbl, status_badge, check, test_btn, edit_btn, remove]
         if not getattr(self, "_sites_visible", False):
             row_frame.grid_remove()
 
@@ -773,6 +917,63 @@ class LacaleWatcherApp:
             del self._custom_site_rows[key]
         self._refresh_custom_sites_listbox()
         self._save_config()
+
+    def _test_site_threaded(self, key: str) -> None:
+        """Déclenche un test immédiat pour un site spécifique depuis l'UI."""
+        site = next((s for s in self.sites if s.get("key") == key), None)
+        if site:
+            self.root.after(0, lambda: self._test_site(site, show_popup_on_open=True))
+
+    def _edit_site(self, key: str) -> None:
+        """Ouvre une boîte de dialogue pour modifier le nom/URL d'un site."""
+        site = next((s for s in self.sites if s.get("key") == key), None)
+        if not site:
+            return
+        is_builtin = site.get("builtin", False)
+        new_name = site.get("name", "")
+        if not is_builtin:
+            new_name = simpledialog.askstring(
+                "Modifier le site", "Nom du site :",
+                initialvalue=site.get("name", ""),
+            )
+            if new_name is None:
+                return
+            new_name = new_name.strip()
+            if not new_name:
+                messagebox.showerror("Erreur", "Le nom ne peut pas être vide.")
+                return
+            normalized = lambda v: (v or "").strip().lower()
+            if any(
+                s.get("key") != key and normalized(s.get("name")) == normalized(new_name)
+                for s in self.sites
+            ):
+                messagebox.showinfo("Site existant", "Un site avec ce nom existe déjà.")
+                return
+        new_url = simpledialog.askstring(
+            "Modifier le site", "URL :",
+            initialvalue=site.get("url", ""),
+        )
+        if new_url is None:
+            return
+        new_url = new_url.strip()
+        parsed = urllib.parse.urlparse(new_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            messagebox.showerror("URL invalide", "L'URL doit commencer par http:// ou https://.")
+            return
+        if not is_builtin:
+            site["name"] = new_name
+        site["url"] = new_url
+        self._save_config()
+        self._refresh_custom_sites_listbox()
+
+    def _check_now(self) -> None:
+        """Déclenche une vérification immédiate de tous les sites actifs."""
+        enabled = [s for s in self.sites if s.get("enabled", True)]
+        if not enabled:
+            return
+        self._append_log("---- Vérification manuelle ----")
+        for i, site in enumerate(enabled):
+            self.root.after(i * 800, lambda s=site: self._test_site(s, show_popup_on_open=True))
 
     def _on_add_custom_site(self) -> None:
         name = simpledialog.askstring("Ajouter un site", "Nom du site :")
@@ -935,30 +1136,6 @@ class LacaleWatcherApp:
                 self._notify_windows(
                     f"{name} - ERREUR",
                     f"Le site {name} renvoie une erreur ({status}).",
-                )
-
-            return status == "OUVERT"
-
-            if status == "OUVERT" and show_popup_on_open:
-                if self.play_sound_on_open:
-                    try:
-                        self.root.bell()
-                    except Exception:
-                        pass
-
-                messagebox.showinfo(
-                    f"{name} - INSCRIPTIONS OUVERTES",
-                    f"Les inscriptions à {name} semblent OUVERTES !\n"
-                    f"Va vite sur le site : {url}",
-                )
-
-                if self.open_browser_on_open:
-                    if url:
-                        webbrowser.open(url)
-
-                self._notify_windows(
-                    f"{name} - INSCRIPTIONS OUVERTES",
-                    f"Les inscriptions à {name} semblent OUVERTES.",
                 )
 
             return status == "OUVERT"
@@ -1316,6 +1493,7 @@ class LacaleWatcherApp:
             f"---- Surveillance démarrée (toutes les {self.interval_minutes} min) ----"
         )
 
+        self._append_log(f"[info] Données stockées dans : {BASE_DIR}")
         self.thread = threading.Thread(target=self._watcher_loop, daemon=True)
         self.thread.start()
 
