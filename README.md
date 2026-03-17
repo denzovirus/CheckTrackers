@@ -1,5 +1,7 @@
 # CheckTracker
 
+![app](images/app.png)
+
 Application Windows de surveillance automatique des pages d’inscription de trackers.
 
 Surveille par défaut : **la-cale.space**, **abn.lol**, **tctg.pm**, **hdf.world** + sites personnalisés.
@@ -39,3 +41,4 @@ Les données sont stockées dans :
 ## Licence
 
 Voir [LICENSE](LICENSE).
+
